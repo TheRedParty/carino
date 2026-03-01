@@ -1,0 +1,120 @@
+CARIÑO FRONT END CHANGELOG
+carino.red · Mutual Aid Tool by The Red Party
+═══════════════════════════════════════════════════════════════
+
+
+[2026-02-28] CATEGORIES — Cleaning + Comrade Support
+──────────────────────────────────────────────────────
+- "Cleaning" added to local category filter and post form
+- "Comrade Support" added to global category filter and post form
+- Both added to filterSets, filterLabels, and catOptionsHTML()
+- "Comrade Support" chosen over "Emotional Support" — names the
+  relationship correctly. You're not a therapist, you're a comrade.
+
+
+[2026-02-28] INBOX — Completion Flow
+──────────────────────────────────────
+- Status field added to every thread: active, pending-completion,
+  or complete
+- Thread header shows "Mark as Done" button for active/pending threads
+- Priya S. thread pre-seeded as pending-completion
+- On confirm: thread flips to complete, system message appears,
+  compose replaced with post-completion actions
+- Post-completion: "Leave a Thank You Note" + "Vouch for [name]"
+- Completed threads show "✓ Complete" badge (gold, inert)
+
+
+[2026-02-28] INBOX — Thank You Notes + Vouching
+──────────────────────────────────────────────────
+- Thank You Note: textarea + named/anon toggle
+- Vouch: optional note, one per completed interaction
+- Both accessible from completed thread compose area
+
+
+[2026-02-28] ORG DETAIL — Tabbed Layout
+─────────────────────────────────────────
+- Three tabs: About / Announcements / Events & Opportunities
+- About is active by default
+- Tabs show red badge with item count
+- Orgs with no announcements show "No announcements yet"
+
+
+[2026-02-28] ORG DETAIL — Announcements
+─────────────────────────────────────────
+- Announcements section in org detail (tab 2)
+- Tool Lending Library: 2 announcements
+- Tech Collective: 2 announcements
+- All other orgs: empty array, ready for data
+
+
+[2026-02-28] PROFILES — Organizations Section
+───────────────────────────────────────────────
+- Organizations section in profile side column
+- Clickable org cards → org detail page
+- Alex M. pre-seeded as member of Tool Library + Tech Collective
+
+
+[2026-02-28] ORG DETAIL — Member State + RSVP
+────────────────────────────────────────────────
+- Members see "✓ Member" instead of "Request to Join"
+- RSVP button on every event (members only)
+- Capacity tracking, live count updates, cancel support
+- Full events show greyed "Full" button
+
+
+[2026-02-28] AUTH — Sign In / Sign Up + Action Gating
+───────────────────────────────────────────────────────
+- Nav starts logged-out — "Sign In" button
+- Sign In: any email/password → logs in as Alex M. (demo)
+- Sign Up: 4-step onboarding flow
+- requireAuth() gates: Respond, Post, Report, RSVP, Join
+- pendingAction fires automatically after sign in
+
+
+[2026-02-28] MODERATION — Report System
+─────────────────────────────────────────
+- Report flag (⚑) on cards, org pages, profile
+- 5 reasons + "Other" textarea
+- Auth-gated, 5-report auto-takedown policy shown
+
+
+[2026-02-28] MESSAGING — Inbox
+────────────────────────────────
+- Two-column inbox with 4 demo threads
+- Working compose, unread dots, thread switching
+- Respond on card → opens/creates thread
+
+
+[2026-02-28] PROFILES — Full + Quick Card
+───────────────────────────────────────────
+- Quick card modal on any name click
+- Full profile: stats, posts, vouches, orgs, thank you notes
+
+
+[2026-02-28] NAV — Profile Dropdown
+─────────────────────────────────────
+- Avatar + name when logged in
+- Dropdown: My Profile, Inbox (badge), Sign Out
+
+
+[2026-02-27] POLICY CLEANUP
+──────────────────────────────
+- Anonymous posting removed
+- Childcare category removed
+- Sample data updated with real names
+
+
+[EARLIER] CORE BUILD
+──────────────────────
+- Board, orgs, about, hero, chain animation
+- Deployed to carino.red on DigitalOcean
+
+
+═══════════════════════════════════════════════════════════════
+OPEN WORK REMAINING
+
+[ ] Admin dashboard — separate tool, not part of main front end.
+    Needs its own planning session before build.
+
+FRONT END IS OTHERWISE FEATURE-COMPLETE FOR GITHUB PUSH.
+═══════════════════════════════════════════════════════════════
