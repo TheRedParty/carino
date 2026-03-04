@@ -103,7 +103,7 @@ README.md         — this file
 
 ## What's Next
 
-- [x] Admin dashboard (planned, not started — needs its own design session)
+- [ ] Admin dashboard (planned, not started — needs its own design session)
 - [x] Node.js / Express backend
 - [x] PostgreSQL database and schema
 - [x] Real auth (bcrypt, session tokens, httpOnly cookies)
