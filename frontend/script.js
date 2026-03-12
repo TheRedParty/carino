@@ -1,6 +1,6 @@
 /* ============================================================
-   CARIÑO — script.js
-   carino.red · Mutual Aid Tool by The Red Party
+   PREMA — script.js
+   prema.red · Mutual Aid Tool by The Red Party
    ============================================================ */
 
 /* ── API ── */
@@ -361,7 +361,7 @@ function buildSignUpModal(step) {
   if (step === 4) return `
     <div class="signup-welcome">
       <div class="signup-welcome-star">★</div>
-      <div class="modal-title" style="margin-bottom:0.5rem">Welcome to Cariño</div>
+      <div class="modal-title" style="margin-bottom:0.5rem">Welcome to Prema</div>
       <p class="modal-sub" style="margin-bottom:1.5rem">You're in. The community is better for it.</p>
       <div class="signup-welcome-name">${signupData.displayname || signupData.username}</div>
       <p class="signup-welcome-loc">📍 ${signupData.location || 'Location not set'}</p>
@@ -1162,8 +1162,8 @@ async function openOrgDetail(slug, fromPage) {
       </div>
       <footer class="site-footer">
         <div class="footer-inner">
-          <div class="footer-logo">Cariño</div>
-          <div class="footer-mid"><span>Tenderness in action.</span></div>
+          <div class="footer-logo">Prema</div>
+          <div class="footer-mid"><span>Unconditional love in action.</span></div>
           <div class="footer-party">Brought to you by <a href="https://theparty.red" target="_blank">The Red Party</a></div>
         </div>
       </footer>
