@@ -4,7 +4,7 @@
    ============================================================ */
 
 /* ── API ── */
-const API = 'http://104.131.25.51/api';
+const API = 'https://dev.prema.red/api';
 
 
 /* ── CHAIN BUTTON ── */
