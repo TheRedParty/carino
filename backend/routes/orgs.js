@@ -295,4 +295,131 @@ router.post('/:id/report', requireAuth, async (req, res) => {
   }
 });
 
+// CREATE AN EVENT
+router.post('/:id/events', requireAuth, async (req, res) => {
+  const { title, description, event_date, location, capacity, type } = req.body;
+
+  if (!title) {
+    return res.status(400).json({ error: 'Title is required' });
+  }
+
+  try {
+    const membership = await db.query(
+      'SELECT * FROM org_members WHERE org_id = $1 AND user_id = $2 AND role = $3 AND status = $4',
+      [req.params.id, req.session.userId, 'admin', 'active']
+    );
+
+    if (membership.rows.length === 0) {
+      return res.status(403).json({ error: 'Only org admins can create events' });
+    }
+
+    const result = await db.query(
+      `INSERT INTO events (org_id, title, description, event_date, location, capacity, type)
+       VALUES ($1, $2, $3, $4, $5, $6, $7)
+       RETURNING id`,
+      [req.params.id, title, description, event_date, location, capacity || null, type || 'event']
+    );
+
+    res.status(201).json({ message: 'Event created', eventId: result.rows[0].id });
+
+  } catch (err) {
+    console.error('Create event error:', err.message);
+    res.status(500).json({ error: 'Something went wrong' });
+  }
+});
+
+// GET MEMBERS (org admin only)
+router.get('/:id/members', requireAuth, async (req, res) => {
+  try {
+    const membership = await db.query(
+      'SELECT * FROM org_members WHERE org_id = $1 AND user_id = $2 AND role = $3 AND status = $4',
+      [req.params.id, req.session.userId, 'admin', 'active']
+    );
+
+    if (membership.rows.length === 0) {
+      return res.status(403).json({ error: 'Only org admins can view the member list' });
+    }
+
+    const result = await db.query(
+      `SELECT org_members.id, org_members.user_id, org_members.role, org_members.status,
+              org_members.created_at, users.username, users.display_name
+       FROM org_members
+       JOIN users ON org_members.user_id = users.id
+       WHERE org_members.org_id = $1
+       ORDER BY org_members.status ASC, org_members.created_at ASC`,
+      [req.params.id]
+    );
+
+    res.json({ members: result.rows });
+
+  } catch (err) {
+    console.error('Get members error:', err.message);
+    res.status(500).json({ error: 'Something went wrong' });
+  }
+});
+
+// APPROVE OR REJECT A JOIN REQUEST
+router.patch('/:id/members/:userId', requireAuth, async (req, res) => {
+  const { action } = req.body; // 'approve' or 'reject'
+
+  if (!['approve', 'reject'].includes(action)) {
+    return res.status(400).json({ error: 'Action must be approve or reject' });
+  }
+
+  try {
+    const membership = await db.query(
+      'SELECT * FROM org_members WHERE org_id = $1 AND user_id = $2 AND role = $3 AND status = $4',
+      [req.params.id, req.session.userId, 'admin', 'active']
+    );
+
+    if (membership.rows.length === 0) {
+      return res.status(403).json({ error: 'Only org admins can manage members' });
+    }
+
+    if (action === 'approve') {
+      await db.query(
+        'UPDATE org_members SET status = $1 WHERE org_id = $2 AND user_id = $3',
+        ['active', req.params.id, req.params.userId]
+      );
+      res.json({ message: 'Member approved' });
+    } else {
+      await db.query(
+        'DELETE FROM org_members WHERE org_id = $1 AND user_id = $2',
+        [req.params.id, req.params.userId]
+      );
+      res.json({ message: 'Request rejected' });
+    }
+
+  } catch (err) {
+    console.error('Manage member error:', err.message);
+    res.status(500).json({ error: 'Something went wrong' });
+  }
+});
+
+// PROMOTE MEMBER TO ORG ADMIN
+router.patch('/:id/members/:userId/role', requireAuth, async (req, res) => {
+  try {
+    const membership = await db.query(
+      'SELECT * FROM org_members WHERE org_id = $1 AND user_id = $2 AND role = $3 AND status = $4',
+      [req.params.id, req.session.userId, 'admin', 'active']
+    );
+
+    if (membership.rows.length === 0) {
+      return res.status(403).json({ error: 'Only org admins can promote members' });
+    }
+
+    await db.query(
+      'UPDATE org_members SET role = $1 WHERE org_id = $2 AND user_id = $3',
+      ['admin', req.params.id, req.params.userId]
+    );
+
+    res.json({ message: 'Member promoted to org admin' });
+
+  } catch (err) {
+    console.error('Promote member error:', err.message);
+    res.status(500).json({ error: 'Something went wrong' });
+  }
+});
+
+
 module.exports = router;

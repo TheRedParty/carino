@@ -97,6 +97,7 @@ function showPage(id) {
   if (id === 'orgs')  initOrgs();
   if (id === 'admin') initAdmin();
   if (id === 'inbox') loadInbox();
+  if (id === 'settings') loadSettings();
 }
 
 function toggleMenu() {
@@ -147,6 +148,7 @@ function updateNavAuth() {
         <button class="profile-dropdown-item" onclick="showPage('inbox'); closeProfileMenu()">
           Inbox <span class="inbox-badge" id="inbox-badge" style="display:none"></span>
         </button>
+        <button class="profile-dropdown-item" onclick="showPage('settings'); closeProfileMenu()">Settings</button>
         ${currentUser.is_admin ? `
   <div class="profile-dropdown-divider"></div>
   <button class="profile-dropdown-item" onclick="showPage('admin'); closeProfileMenu()">Admin Dashboard</button>
@@ -179,6 +181,56 @@ async function signOut() {
   showPage('board');
   showToast('Signed out.');
 }
+
+
+/* ══════════════════════════════════════
+   SETTINGS
+══════════════════════════════════════ */
+function loadSettings() {
+  if (!currentUser) return;
+  document.getElementById('settings-displayname').value = currentUser.name || '';
+  document.getElementById('settings-location').value = currentUser.location || '';
+  document.getElementById('settings-bio').value = currentUser.bio || '';
+}
+
+async function saveSettings() {
+  const display_name = document.getElementById('settings-displayname').value.trim();
+  const location     = document.getElementById('settings-location').value.trim();
+  const bio          = document.getElementById('settings-bio').value.trim();
+
+  if (!display_name) { showToast('Display name cannot be empty.'); return; }
+
+  try {
+    const res = await fetch(`${API}/users/me`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify({ display_name, location, bio })
+    });
+
+    const data = await res.json();
+
+    if (!res.ok) {
+      showToast(data.error || 'Could not save settings.');
+      return;
+    }
+
+    // Update currentUser in memory
+    currentUser.name     = data.user.display_name || data.user.username;
+    currentUser.location = data.user.location;
+    currentUser.bio      = data.user.bio;
+
+    // Refresh nav so name change shows immediately
+    updateNavAuth();
+    showToast('✓ Settings saved.');
+
+  } catch (err) {
+    console.error('Save settings error:', err);
+    showToast('Could not connect to server.');
+  }
+}
+
+
 
 function buildSignInModal() {
   const hint = pendingAction ? '<p class="auth-gate-hint">Sign in to continue.</p>' : '';
@@ -1453,6 +1505,22 @@ document.addEventListener('DOMContentLoaded', async () => {
   } catch (err) {
     console.error('Session check failed:', err);
   }
+
+// Handle email verification redirect
+const params = new URLSearchParams(window.location.search);
+const verified = params.get('verified');
+if (verified === 'true') {
+  showToast('✓ Email verified — you can now sign in.');
+  openModal('signin');
+  window.history.replaceState({}, '', window.location.pathname);
+} else if (verified === 'expired') {
+  showToast('Verification link has expired. Please sign up again.');
+  window.history.replaceState({}, '', window.location.pathname);
+} else if (verified === 'invalid') {
+  showToast('Invalid verification link.');
+  window.history.replaceState({}, '', window.location.pathname);
+}
+
 
   showPage('board');
 });

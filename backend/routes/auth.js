@@ -136,20 +136,20 @@ router.get('/verify/:token', async (req, res) => {
     );
 
     if (result.rows.length === 0) {
-      return res.status(400).json({ error: 'Invalid or expired verification link' });
+      return res.redirect('http://localhost:5500/frontend/index.html?verified=invalid');
     }
 
     const verification = result.rows[0];
 
     if (new Date() > new Date(verification.expires_at)) {
       await db.query('DELETE FROM email_verifications WHERE token = $1', [token]);
-      return res.status(400).json({ error: 'Verification link has expired' });
+      return res.redirect('http://localhost:5500/frontend/index.html?verified=expired');
     }
 
     await db.query('UPDATE users SET is_verified = TRUE WHERE id = $1', [verification.user_id]);
     await db.query('DELETE FROM email_verifications WHERE token = $1', [token]);
 
-    res.json({ message: 'Email verified. You can now sign in.' });
+    res.redirect('http://localhost:5500/frontend/index.html?verified=true');
 
   } catch (err) {
     console.error('Verify error:', err.message);
