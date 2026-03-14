@@ -2323,6 +2323,10 @@ async function loadInbox() {
 }
 
 function renderInbox() {
+  if (isMobile()) {
+    document.getElementById("inbox-sidebar").style.display = "flex";
+    document.getElementById("inbox-main").style.display = "none";
+  }
   const threadList = document.getElementById("inbox-thread-list");
   if (!threadList) return;
 
@@ -2380,9 +2384,15 @@ function updateInboxBadge() {
 
 async function openThreadById(threadId) {
   if (isMobile()) {
-    document.getElementById("inbox-main").classList.add("mobile-open");
-    document.getElementById("inbox-sidebar").classList.add("mobile-hidden");
+    document.getElementById("inbox-sidebar").style.display = "none";
+    document.getElementById("inbox-main").style.display = "flex";
   }
+
+  function closeMobileThread() {
+    document.getElementById("inbox-sidebar").style.display = "flex";
+    document.getElementById("inbox-main").style.display = "none";
+  }
+
   try {
     const res = await fetch(`${API}/threads/${threadId}`, {
       credentials: "include",

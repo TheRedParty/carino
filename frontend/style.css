@@ -2080,6 +2080,7 @@ nav {
     overflow-y: auto;
   }
   .inbox-main {
+    display: none;
     flex-direction: column;
     flex: 1;
     min-height: 0;
