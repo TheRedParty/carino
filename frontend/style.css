@@ -2079,18 +2079,11 @@ nav {
     border-right: none;
     overflow-y: auto;
   }
-  .inbox-sidebar.mobile-hidden {
-    display: none;
-  }
   .inbox-main {
-    display: none;
     flex-direction: column;
     flex: 1;
     min-height: 0;
     overflow: hidden;
-  }
-  .inbox-main.mobile-open {
-    display: flex;
   }
   .inbox-mobile-back {
     display: flex;
