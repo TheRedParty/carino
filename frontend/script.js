@@ -25,6 +25,7 @@ function buildChains() {
 }
 
 function discardChains() {
+  localStorage.setItem('chainsBroken', 'true');
   const wrap = document.getElementById('chain-btn-wrap');
   const btn  = document.getElementById('chain-btn');
   const frags = document.getElementById('chain-fragments');
@@ -1912,6 +1913,10 @@ if (verified === 'true') {
   window.history.replaceState({}, '', window.location.pathname);
 }
 
+if (localStorage.getItem('chainsBroken')) {
+  const hero = document.querySelector('.hero');
+  if (hero) hero.classList.add('gone');
+}
 
   await router();
 });
