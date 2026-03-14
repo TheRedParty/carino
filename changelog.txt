@@ -2,6 +2,14 @@ PREMA CHANGELOG
 prema.red · Mutual Aid Tool by The Red Party
 ═══════════════════════════════════════════════════════════════
 
+[2026-03-14] Add org admin UI — announcements, events, member management
+──────────────────────────────────────────────
+- Org admins see Members tab, Post Announcement, and Create Event controls on org detail page
+- Members tab shows pending join requests (approve/reject) and active members (promote to admin)
+- Admin badge shown in org sidebar for org admins
+- Fixed currentOrgSlug/currentOrgFromPage state vars for clean page reload after actions
+- Updated schema.sql: added type column to events, created_at to org_members
+
 
 [2026-03-11] PROJECT RENAME — Cariño → Prema
 ──────────────────────────────────────────────
