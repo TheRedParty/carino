@@ -1202,54 +1202,7 @@ async function submitReport(contentType, contentId) {
   }
 }
 
-// function toggleRsvp(evId, orgId, btn) {
-//   requireAuth(() => {
-//     // Check membership — for demo, allow if joined or if in joinedOrgs
-//     // In production this would check the backend
-//     const isMember = joinedOrgs.has(orgId);
-//     if (!isMember) {
-//       showToast('You need to be a member to RSVP. Request to join first.');
-//       return;
-//     }
 
-//     // Find the event across all orgs
-//     const allOrgs = [...localOrgs, ...globalOrgs];
-//     let ev = null;
-//     for (const org of allOrgs) {
-//       ev = org.events?.find(e => e.id === evId);
-//       if (ev) break;
-//     }
-//     if (!ev) return;
-
-//     if (rsvpSet.has(evId)) {
-//       // Cancel RSVP
-//       rsvpSet.delete(evId);
-//       ev.rsvpCount = Math.max(0, ev.rsvpCount - 1);
-//       btn.textContent = 'RSVP';
-//       btn.classList.remove('rsvp-btn-going');
-//       showToast('RSVP cancelled.');
-//     } else {
-//       // Check capacity
-//       if (ev.capacity !== null && ev.rsvpCount >= ev.capacity) {
-//         showToast('This event is full.');
-//         return;
-//       }
-//       rsvpSet.add(evId);
-//       ev.rsvpCount++;
-//       btn.textContent = '✓ Going';
-//       btn.classList.add('rsvp-btn-going');
-//       showToast('You\'re going! We\'ll remind you closer to the date.');
-//     }
-
-//     // Update the spots display
-//     const spotsEl = btn.closest('.od-event')?.querySelector('.ev-spots');
-//     if (spotsEl && ev.capacity !== null) {
-//       const spots = ev.capacity - ev.rsvpCount;
-//       spotsEl.textContent = spots === 0 ? 'Full' : `${spots} spot${spots === 1 ? '' : 's'} left`;
-//       spotsEl.classList.toggle('ev-spots-full', spots === 0);
-//     }
-//   });
-// }
 function initBoard() {
   if (boardReady) return;
   boardReady = true;
@@ -1419,6 +1372,7 @@ function renderCards() {
 </div>
         <div class="card-actions">
           <button class="card-report-btn" onclick="openReport('post', ${p.id}, '${p.title}')" title="Report this post">⚑</button>
+          ${currentUser && currentUser.id === p.user_id ? `<button class="card-delete-btn" onclick="deletePost(${p.id}, this)">Delete</button>` : ''}
           <button class="card-cta" onclick="respondToPost(${p.user_id}, '${p.name}', '${p.title}')">Respond</button>
         </div>
       </div>
@@ -1426,6 +1380,26 @@ function renderCards() {
   `,
     )
     .join("");
+}
+
+async function deletePost(postId, btn) {
+  if (!confirm('Delete this post?')) return;
+  try {
+    const res = await fetch(`${API}/posts/${postId}`, {
+      method: 'DELETE',
+      credentials: 'include'
+    });
+    if (res.ok) {
+      showToast('Post deleted.');
+      fetchAndRenderCards();
+    } else {
+      const data = await res.json();
+      showToast(data.error || 'Could not delete post.');
+    }
+  } catch (err) {
+    console.error('Delete post error:', err);
+    showToast('Could not connect to server.');
+  }
 }
 
 /* ══════════════════════════════════════
