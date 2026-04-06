@@ -73,7 +73,7 @@ router.post('/', requireAuth, async (req, res) => {
   try {
     const result = await db.query(
       `INSERT INTO posts (user_id, type, scope, category, title, body, location, latitude, longitude)
-       VALUES ($1, $2, $3, $4, $5, $6, $7)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
        RETURNING *`,
       [req.session.userId, type, scope, category, title, body, location, latitude || null, longitude || null]
     );
