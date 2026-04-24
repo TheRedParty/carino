@@ -1,6 +1,8 @@
 const express = require('express');
 const router = express.Router();
 const db = require('../db');
+const Stripe = require('stripe');
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 
 function requireAuth(req, res, next) {
   if (!req.session.userId) {
@@ -19,7 +21,7 @@ router.get('/', async (req, res) => {
         COUNT(org_members.id) FILTER (WHERE org_members.status = 'active') as member_count
       FROM orgs
       LEFT JOIN org_members ON orgs.id = org_members.org_id
-      WHERE orgs.status = 'approved'
+      WHERE orgs.status = 'active'
       AND orgs.is_removed = FALSE
     `;
 
@@ -58,7 +60,7 @@ router.get('/:slug', async (req, res) => {
        FROM orgs
        LEFT JOIN org_members ON orgs.id = org_members.org_id
        WHERE orgs.slug = $1
-       AND orgs.status = 'approved'
+       AND orgs.status = 'active'
        AND orgs.is_removed = FALSE
        GROUP BY orgs.id`,
       [req.params.slug]
@@ -130,27 +132,155 @@ router.get('/:slug', async (req, res) => {
   }
 });
 
-// SUBMIT ORG CREATION REQUEST
-router.post('/request', requireAuth, async (req, res) => {
-  const { name, type, scope, description, website, contact_email, values_statement } = req.body;
+// CREATE A NEW ORG (contribution-based, no moderation)
+router.post('/', requireAuth, async (req, res) => {
+  const {
+    name,
+    description,
+    scope,
+    location,
+    contact_email,
+    values_statement,
+    website,
+    contribution_dollars,
+  } = req.body;
 
-  if (!name || !scope || !description || !values_statement) {
-    return res.status(400).json({ error: 'Name, scope, description, and values statement are required' });
+  if (!name || !scope || !description) {
+    return res.status(400).json({ error: 'Name, scope, and description are required' });
+  }
+
+  // Validate & normalize contribution amount
+  let contribDollars = parseInt(contribution_dollars, 10);
+  if (isNaN(contribDollars) || contribDollars < 0) contribDollars = 0;
+  const contribCents = contribDollars * 100;
+
+  // Generate a URL slug from the name
+  const baseSlug = name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
+  if (!baseSlug) {
+    return res.status(400).json({ error: 'Name must contain at least one letter or number' });
+  }
+
+  // Ensure slug uniqueness by appending -2, -3, etc. if needed
+  let slug = baseSlug;
+  let suffix = 2;
+  // eslint-disable-next-line no-constant-condition
+  while (true) {
+    const existing = await db.query('SELECT id FROM orgs WHERE slug = $1', [slug]);
+    if (existing.rows.length === 0) break;
+    slug = `${baseSlug}-${suffix}`;
+    suffix++;
+  }
+
+  // If contribution is $0, org goes active immediately. Otherwise, pending_payment.
+  const status = contribDollars === 0 ? 'active' : 'pending_payment';
+
+  try {
+    const orgResult = await db.query(
+      `INSERT INTO orgs
+        (name, slug, scope, description, location, contact_email, values_statement, website,
+         status, created_by, contribution_amount_cents)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+       RETURNING id, slug, status`,
+      [
+        name, slug, scope, description, location, contact_email, values_statement, website,
+        status, req.session.userId, contribCents
+      ]
+    );
+
+    const org = orgResult.rows[0];
+
+    // Make the submitter an active admin of their own org
+    await db.query(
+      `INSERT INTO org_members (org_id, user_id, role, status)
+       VALUES ($1, $2, 'admin', 'active')`,
+      [org.id, req.session.userId]
+    );
+
+    res.status(201).json({
+      orgId: org.id,
+      slug: org.slug,
+      status: org.status,
+      contributionDollars: contribDollars,
+    });
+
+  } catch (err) {
+    console.error('Create org error:', err.message);
+    res.status(500).json({ error: 'Something went wrong' });
+  }
+});
+
+// CREATE STRIPE CHECKOUT SESSION FOR A PENDING ORG
+router.post('/:id/checkout', requireAuth, async (req, res) => {
+  const orgId = parseInt(req.params.id, 10);
+  if (isNaN(orgId)) {
+    return res.status(400).json({ error: 'Invalid org ID' });
   }
 
   try {
-    await db.query(
-      `INSERT INTO org_creation_requests 
-        (submitted_by, name, type, scope, description, website, contact_email, values_statement)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
-      [req.session.userId, name, type, scope, description, website, contact_email, values_statement]
+    // Verify org exists, is pending payment, and belongs to the current user
+    const orgResult = await db.query(
+      `SELECT id, slug, name, status, created_by, contribution_amount_cents
+       FROM orgs WHERE id = $1`,
+      [orgId]
     );
 
-    res.status(201).json({ message: 'Request submitted. An admin will review it shortly.' });
+    if (orgResult.rows.length === 0) {
+      return res.status(404).json({ error: 'Organization not found' });
+    }
+
+    const org = orgResult.rows[0];
+
+    if (org.created_by !== req.session.userId) {
+      return res.status(403).json({ error: 'Only the org creator can initiate payment' });
+    }
+
+    if (org.status !== 'pending_payment') {
+      return res.status(400).json({ error: 'This organization does not need payment' });
+    }
+
+    if (!org.contribution_amount_cents || org.contribution_amount_cents < 50) {
+      return res.status(400).json({ error: 'Invalid contribution amount' });
+    }
+
+    // Build redirect URLs
+    const baseUrl = process.env.BASE_URL || 'http://localhost:5500/frontend';
+    const successUrl = `${baseUrl}/#/org/${org.slug}?contribution=success`;
+    const cancelUrl  = `${baseUrl}/#/org/${org.slug}?contribution=canceled`;
+
+    // Create the Stripe Checkout session
+    const session = await stripe.checkout.sessions.create({
+      mode: 'payment',
+      payment_method_types: ['card'],
+      line_items: [{
+        price_data: {
+          currency: 'usd',
+          product_data: {
+            name: `Prema contribution — ${org.name}`,
+            description: 'One-time contribution to support Prema (hosting, development, operations).',
+          },
+          unit_amount: org.contribution_amount_cents,
+        },
+        quantity: 1,
+      }],
+      success_url: successUrl,
+      cancel_url: cancelUrl,
+      metadata: {
+        org_id: String(org.id),
+        user_id: String(req.session.userId),
+      },
+    });
+
+    // Store the Stripe session ID on the org so we can reconcile with the webhook later
+    await db.query(
+      `UPDATE orgs SET stripe_session_id = $1 WHERE id = $2`,
+      [session.id, org.id]
+    );
+
+    res.json({ url: session.url });
 
   } catch (err) {
-    console.error('Org request error:', err.message);
-    res.status(500).json({ error: 'Something went wrong' });
+    console.error('Create checkout session error:', err.message);
+    res.status(500).json({ error: 'Could not create checkout session' });
   }
 });
 

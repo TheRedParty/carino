@@ -1,5 +1,6 @@
 require('dotenv').config({ path: require('path').resolve(__dirname, '.env') });
 
+
 module.exports = {
   dialect: 'postgresql',
   schema: './db/schema.ts',

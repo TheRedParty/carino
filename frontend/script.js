@@ -1055,10 +1055,26 @@ function buildModal(type) {
           <input type="text" id="org-location" class="form-input" placeholder="City or 'Remote'">
         </div>
       </div>
-      <div class="form-field">
+     <div class="form-field">
         <label class="form-label">Contact email</label>
         <input type="email" id="org-email" class="form-input" placeholder="contact@yourorg.org">
       </div>
+
+      <div class="contribution-section">
+        <div class="contribution-title">Contribute to Prema</div>
+        <p class="contribution-blurb">
+          Prema is free. Your contribution covers the server, email, and the time it takes to build this.
+          <strong>Pay what you can — $0 is always okay.</strong>
+        </p>
+        <div class="form-field contribution-amount-field">
+          <label class="form-label">Contribution (USD)</label>
+          <div class="contribution-input-wrap">
+            <span class="contribution-dollar">$</span>
+            <input type="number" id="org-contribution" class="form-input contribution-input" value="10" min="0" step="1">
+          </div>
+        </div>
+      </div>
+
       <button class="form-submit" onclick="submitOrg()">Submit Organization →</button>
     `;
   }
@@ -1219,13 +1235,18 @@ async function submitOrg() {
   const email = document.getElementById("org-email")?.value.trim();
   const values = document.getElementById("org-values")?.value.trim();
 
+  // Read contribution amount (integer dollars, min 0)
+  const contributionRaw = document.getElementById("org-contribution")?.value;
+  let contributionDollars = parseInt(contributionRaw, 10);
+  if (isNaN(contributionDollars) || contributionDollars < 0) contributionDollars = 0;
+
   if (!name || !description || !scope) {
     showToast("Please fill in all required fields.");
     return;
   }
 
   try {
-    const res = await fetch(`${API}/orgs/request`, {
+    const res = await fetch(`${API}/orgs`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       credentials: "include",
@@ -1236,18 +1257,47 @@ async function submitOrg() {
         location,
         contact_email: email,
         values_statement: values,
+        contribution_dollars: contributionDollars,
       }),
     });
 
     const data = await res.json();
 
     if (!res.ok) {
-      showToast(data.error || "Could not submit request.");
+      showToast(data.error || "Could not create organization.");
       return;
     }
 
-    closeModal();
-    showToast("★ Organization submitted — we'll review it shortly.");
+    // $0 contribution → org is already active, done
+    if (data.status === "active") {
+      closeModal();
+      showToast("★ Organization created.");
+      fetchAndRenderOrgs();
+      return;
+    }
+
+    // Paid contribution → create Stripe Checkout session and redirect
+    try {
+      const checkoutRes = await fetch(`${API}/orgs/${data.orgId}/checkout`, {
+        method: "POST",
+        credentials: "include",
+      });
+
+      const checkoutData = await checkoutRes.json();
+
+      if (!checkoutRes.ok || !checkoutData.url) {
+        showToast(checkoutData.error || "Could not start checkout. Your org was saved; try again from the org page.");
+        return;
+      }
+
+      // Redirect the whole window to Stripe's hosted checkout
+      window.location.href = checkoutData.url;
+
+    } catch (err) {
+      console.error("Checkout error:", err);
+      showToast("Could not connect to Stripe. Try again shortly.");
+    }
+
   } catch (err) {
     console.error("Submit org error:", err);
     showToast("Could not connect to server.");

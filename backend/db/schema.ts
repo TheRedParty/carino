@@ -44,12 +44,16 @@ const orgs = pgTable('orgs', {
   contactEmail: varchar('contact_email', { length: 255 }),
   website: varchar('website', { length: 255 }),
   valuesStatement: text('values_statement'),
-  status: varchar('status', { length: 20 }).default('pending'),
+  status: varchar('status', { length: 20 }).default('active'),
   createdBy: integer('created_by').references(() => users.id),
   isRemoved: boolean('is_removed').default(false),
   reportCount: integer('report_count').default(0),
   createdAt: timestamp('created_at').defaultNow(),
   avatarUrl: text('avatar_url'),
+  contributionAmountCents: integer('contribution_amount_cents'),
+  stripeSessionId: text('stripe_session_id'),
+  stripePaymentIntentId: text('stripe_payment_intent_id'),
+  paidAt: timestamp('paid_at'),
 });
 
 /* ─── POSTS ─────────────────────────────────────────────── */

@@ -16,12 +16,20 @@ const adminRoutes = require('./routes/admin');
 const path = require('path');
 const fs = require('fs');
 const uploadRoutes = require('./routes/uploads');
+const Stripe = require('stripe');
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
+
 
 // Middleware
 app.use(cors({
   origin: ['http://localhost:5500', 'http://127.0.0.1:5500', 'https://prema.red'],
   credentials: true
 }));
+
+// Stripe webhook MUST be mounted before express.json() — needs raw body for signature verification
+const webhookRoutes = require('./routes/webhooks');
+app.use('/api/webhooks', express.raw({ type: 'application/json' }), webhookRoutes);
+
 app.use(express.json());
 
 const uploadsDir = path.join(__dirname, '../uploads');
