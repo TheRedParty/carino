@@ -244,8 +244,8 @@ router.post('/:id/checkout', requireAuth, async (req, res) => {
 
     // Build redirect URLs
     const baseUrl = process.env.FRONTEND_URL || 'http://localhost:5500';
-    const successUrl = `${baseUrl}/#/org/${org.slug}?contribution=success`;
-    const cancelUrl  = `${baseUrl}/#/org/${org.slug}?contribution=canceled`;
+    const successUrl = `${baseUrl}/orgs/${org.slug}?contribution=success`;
+    const cancelUrl  = `${baseUrl}/orgs/${org.slug}?contribution=canceled`;
 
     // Create the Stripe Checkout session
     const session = await stripe.checkout.sessions.create({
